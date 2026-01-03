@@ -45,6 +45,9 @@ namespace INDWalks.API.Controllers
             var walksDomainModel = await walkRepository.GetAllAsync(filterOn, filterQuery, sortBy, isAscending ?? true
               , pageNumber, pageSize);
 
+            //create an exception
+            throw new Exception("This is a demo exception");
+
             //Map domain model to DTO
             return Ok(mapper.Map<List<WalkDto>>(walksDomainModel));
         }

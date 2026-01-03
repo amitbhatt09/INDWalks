@@ -8,12 +8,13 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace INDWalks.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
+   
     public class RegionsController : ControllerBase
     {
         private readonly INDWalksDbContext dbContext;
@@ -21,28 +22,48 @@ namespace INDWalks.API.Controllers
         public IRegionRepository regionRepository;
         private IMapper mapper;
 
-        public RegionsController(INDWalksDbContext dbContext, IRegionRepository regionRepository, IMapper mapper)
+        public ILogger<RegionsController> logger { get; }
+
+        public RegionsController(INDWalksDbContext dbContext, IRegionRepository regionRepository, IMapper mapper, ILogger<RegionsController> logger)
         {
             this.dbContext = dbContext;
             this.regionRepository = regionRepository;
             this.mapper = mapper;
+            this.logger = logger;
         }
 
         [HttpGet]
+        //[Authorize(Roles = "Reader, Writer")]
         public async Task<IActionResult> GetAll()
         {
-           
-            var regionsDomain = await regionRepository.GetAllAsync();
+            try
+            {
+                
+
+                logger.LogInformation("GetAll action method invoked");
 
 
+                var regionsDomain = await regionRepository.GetAllAsync();
 
-            var regionsDto = mapper.Map<List<RegionDto>>(regionsDomain);
+                logger.LogInformation($"Finished GetAllregions request with data:{JsonSerializer.Serialize(regionsDomain)}");
 
-            //Return DTOs
-            return Ok(regionsDto);
+                var regionsDto = mapper.Map<List<RegionDto>>(regionsDomain);
+
+                //Return DTOs
+                return Ok(regionsDto);
+
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Something went wrong in the GetAll method");
+                throw;
+            }
         }
+
+
         [HttpGet]
         [Route("{id:guid}")]
+        [Authorize(Roles = "Reader")]
         public async Task<IActionResult> GetRegionById([FromRoute]Guid id)
         {
             //var regions = dbContext.Regions.Find(id);
@@ -58,8 +79,10 @@ namespace INDWalks.API.Controllers
             return Ok(mapper.Map<RegionDto>(regionDomain));
         }
 
+
         [HttpPost]
         [ValidateModel]
+        [Authorize(Roles = "Writer")]
         public async Task<IActionResult> CreateRegion([FromBody] AddRegionRequestDto addRegionRequestDto)
         {
 
@@ -73,10 +96,12 @@ namespace INDWalks.API.Controllers
 
         }
 
-            [HttpPut]
-            [Route("{id:Guid}")]
-            [ValidateModel]
-            public async Task<IActionResult> UpdateRegion([FromRoute] Guid id, [FromBody] UpdateRegionRequestDto updateRegionRequestDto)
+
+         [HttpPut]
+         [Route("{id:Guid}")]
+         [ValidateModel]
+         [Authorize(Roles = "Writer")]
+        public async Task<IActionResult> UpdateRegion([FromRoute] Guid id, [FromBody] UpdateRegionRequestDto updateRegionRequestDto)
             {
 
 
@@ -96,11 +121,9 @@ namespace INDWalks.API.Controllers
             }
 
 
-        
-
-
         [HttpDelete]
         [Route("{id:Guid}")]
+        [Authorize(Roles = "Writer")]
         public async Task<IActionResult> DeleteRegion([FromRoute]Guid id)
         {
            // var regionDomainModel = await dbContext.Regions.FirstOrDefaultAsync(x => x.ID == id);
